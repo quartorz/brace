@@ -8,9 +8,7 @@
 #pragma comment(lib, "ssleay32MD")
 
 int main()
-try{
-	oauth_handler h("", "");
+{
+	oauth_handler h("jpQ5IemAsibklW53CxDLag", "zR5FloubeTVnOQjs0Nbk7iHVYtgaGqtQWuv1AFyZg");
 	h.get_request_token();
-}catch(const brace_exception &e){
-
 }

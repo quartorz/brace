@@ -1,61 +1,12 @@
 #pragma once
 
-#include <stdexcept>
+#include "detail/ssl_handler.hpp"
+
+#include <boost/optional/optional.hpp>
 
 #include <string>
-
-class brace_exception: public std::exception{
-	std::string message;
-
-public:
-#if !defined(_MSC_VER) || _MSC_VER >= 1800
-	brace_exception() = default;
-	brace_exception(const brace_exception&) = default;
-#endif
-#if !defined(_MSC_VER) || _MSC_VER > 1800
-	brace_exception(brace_exception &&) = default;
-#endif
-
-	brace_exception(const std::string &m):message(m){}
-	brace_exception(std::string &&m):message(m){}
-
-#if !defined(_MSC_VER) || _MSC_VER >= 1800
-	brace_exception &operator=(const brace_exception&) = default;
-#endif
-#if !defined(_MSC_VER) || _MSC_VER > 1800
-	brace_exception &operator=(brace_exception&&) = default;
-#endif
-
-	const char *what() const override
-	{
-		return message.c_str();
-	}
-};
-
-#include <boost/asio/io_service.hpp>
-#include <boost/asio/read_until.hpp>
-#include <boost/asio/streambuf.hpp>
-#include <boost/asio/ip/tcp.hpp>
-#include <boost/asio/ssl/context.hpp>
-#include <boost/asio/ssl/stream.hpp>
-
-#include <istream>
-
-#include <iostream>
-#include <vector>
+#include <tuple>
 #include <utility>
-#include <initializer_list>
-
-#include <boost/network.hpp>
-
-boost::asio::ip::tcp::resolver::iterator solve_ip_address(const std::string &address)
-{
-	boost::asio::io_service io_service;
-	boost::asio::ip::tcp::resolver resolver(io_service);
-	boost::asio::ip::tcp::resolver::query query(address, "https");
-
-	return resolver.resolve(query);
-}
 
 const char *get_pointer(const char *s)
 {
@@ -124,44 +75,35 @@ typename get_impl<T>::second_type get_second(const T &o)
 	return get_impl<T>().get_second(o);
 }
 
-inline std::ostream &add_request_line(std::ostream &st, bool is_get, const char *uri)
-{
-	st << (is_get ? "GET " : "POST ") << uri << " HTTP/1.1\r\n";
-	return st;
-}
-
-inline std::ostream &add_request_header(std::ostream &st, std::initializer_list<std::pair<const char*, const char*>> header, bool header_end = false)
-{
-	for(auto &t : header){
-		st << std::get<0>(t) << ": " << std::get<1>(t) << "\r\n";
-	}
-	if(header_end)
-		st << "\r\n";
-	return st;
-}
-
-inline std::ostream &make_request(std::ostream &st, bool is_get, const char *uri, std::initializer_list<std::pair<const char*, const char*>> header, bool header_end = false)
-{
-	add_request_line(st, is_get, uri);
-	add_request_header(st, header, header_end);
-	return st;
-}
-
 class oauth_handler{
 	std::string key, secret;
-	boost::asio::ip::tcp::resolver::iterator ip;
 
 public:
 	oauth_handler(const std::string &key, const std::string &secret)
 		: key(key)
 		, secret(secret)
-		, ip(solve_ip_address("api.twitter.com"))
 	{
 	}
 
 public:
-	std::string get_request_token()
+	boost::optional<std::tuple<std::string, std::string>> get_request_token()
 	{
+		static const char *host = "api.twitter.com";
+		static const char *endpoint = "/oauth/request_token";
+
+#if 1
+		detail::ssl_handler handler(host, endpoint, detail::http_method::POST);
+
+		if(!handler.resolve_host()){
+			return boost::none;
+		}
+
+		auto result = handler.connect({key, secret}, {});
+
+		std::cout << std::get<0>(result) << std::endl << std::get<1>(result) << std::endl;
+
+		return std::make_tuple(std::get<1>(result), "");
+#else
 		namespace asio = boost::asio;
 		namespace ssl = asio::ssl;
 		using tcp = asio::ip::tcp;
@@ -170,18 +112,35 @@ public:
 
 		ssl::context context(service, ssl::context::sslv3_client);
 		ssl::stream<tcp::socket> ssl_stream(service, context);
-		ssl_stream.lowest_layer().connect(*ip);
+		ssl_stream.lowest_layer().connect(*detail::solve_host(host));
 		ssl_stream.handshake(ssl::stream_base::client);
 
 		asio::streambuf request;
 		std::ostream req_stream(&request);
-		make_request(req_stream, false, "/oauth/request_token",{
-				{"Host", "api.twitter.com"},
-				{"User-Agent", "Brace Beta"},
-				{"Content-Type", "text/plain"},
-				{"Content-Length", "0"},
-				{"Connection", "Close"}
+		detail::make_request(req_stream, detail::http_method::POST, endpoint, {
+			{"Host", host},
+			{"User-Agent", "Brace Beta"},
+			{"Content-Type", "application/x-www-form-urlencoded"},
+			{"Content-Length", "0"},
+			{"Connection", "Close"}
+		}, false);
+
+		std::vector<std::pair<std::string, std::string>> params = {
+			{"oauth_consumer_key", key},
+			{"oauth_nonce", detail::make_nonce().c_str()},
+			{"oauth_signature_method", "HMAC-SHA1"},
+			{"oauth_timestamp", boost::lexical_cast<std::string>(std::time(nullptr))},
+			{"oauth_version", "1.0"},
+		};
+
+		std::string signature = detail::make_signature(detail::http_method::POST, detail::make_url(host, endpoint), params, secret, "");
+		params.push_back({"oauth_signature", std::move(signature)});
+		detail::add_request_header(req_stream, {
+			{"Authorization", detail::make_authorization_header(params).c_str()}
 		}, true);
+
+		std::cout << asio::buffer_cast<const char*>(request.data());
+
 		asio::write(ssl_stream, request);
 
 		asio::streambuf response;
@@ -194,9 +153,7 @@ public:
 		std::string a;
 		while(std::getline(stream, a))std::cout << a << std::endl;
 
-		return a;
-
-//		std::cout << solve_ip_address("api.twitter.com")->endpoint().address().to_string();
-		return "";
+		return {};
+#endif
 	}
 };
