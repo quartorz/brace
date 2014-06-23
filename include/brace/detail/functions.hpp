@@ -1,11 +1,11 @@
 #pragma once
 
-
-
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
 
 #include <boost/lexical_cast.hpp>
+
+#include <boost/optional/optional.hpp>
 
 #include <openssl/hmac.h>
 #include <openssl/sha.h>
@@ -142,5 +142,21 @@ namespace detail{
 		}
 
 		return header;
+	}
+
+	template <std::size_t N>
+	inline boost::optional<std::string> parse_url_query(const std::string &query, const char (&param)[N])
+	{
+		std::string::size_type begin = query.find(param);
+		if(begin == std::string::npos)
+			return boost::none;
+		begin += N - 1;
+
+		std::string::size_type end = query.find('&', begin);
+		if(end == std::string::npos)
+			end = query.length();
+
+		return boost::lexical_cast<std::string>(
+			boost::make_iterator_range(&query[begin], &query[end]));
 	}
 }

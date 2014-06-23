@@ -14,6 +14,7 @@
 #include <boost/lexical_cast.hpp>
 
 #include <string>
+#include <tuple>
 #include <ostream>
 #include <vector>
 #include <utility>

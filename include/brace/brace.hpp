@@ -44,30 +44,14 @@ public:
 
 		std::string &content = std::get<1>(result);
 
-		std::string::size_type key_begin, key_end, sec_begin, sec_end;
-
-		key_begin = content.find("oauth_token=");
-		if(key_begin == std::string::npos)
+		auto &token = detail::parse_url_query(content, "oauth_token=");
+		if(!token)
 			return boost::none;
-		key_begin += 12;
 
-		key_end = content.find('&', key_begin);
-		if(key_end == std::string::npos)
-			key_end = content.length() - 1;
-
-		sec_begin = content.find("oauth_token_secret=");
-		if(sec_begin == std::string::npos)
+		auto &secret = detail::parse_url_query(content, "oauth_token_secret=");
+		if(!secret)
 			return boost::none;
-		sec_begin += 19;
 
-		sec_end = content.find('&', sec_begin);
-		if(sec_end == std::string::npos)
-			sec_end = content.length() - 1;
-
-		return std::make_tuple(
-			boost::lexical_cast<std::string>(
-				boost::make_iterator_range(&content[key_begin], &content[key_end])),
-			boost::lexical_cast<std::string>(
-				boost::make_iterator_range(&content[sec_begin], &content[sec_end])));
+		return std::make_tuple(*token, *secret);
 	}
 };
