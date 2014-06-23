@@ -24,6 +24,7 @@ public:
 	}
 
 public:
+	// returns (request token, request token secret) or boost::none
 	boost::optional<std::tuple<std::string, std::string>> get_request_token()
 	{
 		static const char *host = "api.twitter.com";
