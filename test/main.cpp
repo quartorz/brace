@@ -1,11 +1,19 @@
 #define BOOST_NETWORK_ENABLE_HTTPS
-#define _SCL_SECURE_NO_WARNINGS
-#define _WIN32_WINNT 0x601
+
+#if defined(_WIN32)
+# define _SCL_SECURE_NO_WARNINGS
+# define _WIN32_WINNT 0x601
+
+# if defined(NDEBUG)
+#  pragma comment(lib, "libeay32MD")
+#  pragma comment(lib, "ssleay32MD")
+# else
+#  pragma comment(lib, "libeay32MDd")
+#  pragma comment(lib, "ssleay32MDd")
+# endif
+#endif
 
 #include "brace/brace.hpp"
-
-#pragma comment(lib, "libeay32MD")
-#pragma comment(lib, "ssleay32MD")
 
 int main()
 {
