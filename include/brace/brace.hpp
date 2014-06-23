@@ -2,9 +2,6 @@
 
 #include <boost/optional/optional.hpp>
 
-#include <boost/range/iterator_range.hpp>
-#include <boost/range/iterator_range_io.hpp>
-
 #include <boost/lexical_cast.hpp>
 
 #include <string>
@@ -12,6 +9,7 @@
 #include <utility>
 
 #include "detail/ssl_handler.hpp"
+#include "detail/functions.hpp"
 
 class oauth_handler{
 	std::string key, secret;

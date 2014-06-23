@@ -156,7 +156,6 @@ namespace detail{
 		if(end == std::string::npos)
 			end = query.length();
 
-		return boost::lexical_cast<std::string>(
-			boost::make_iterator_range(&query[begin], &query[end]));
+		return query.substr(begin, end - begin);
 	}
 }
