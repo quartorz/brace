@@ -1,7 +1,5 @@
 #pragma once
 
-#include "detail/ssl_handler.hpp"
-
 #include <boost/optional/optional.hpp>
 
 #include <boost/range/iterator_range.hpp>
@@ -12,6 +10,8 @@
 #include <string>
 #include <tuple>
 #include <utility>
+
+#include "detail/ssl_handler.hpp"
 
 class oauth_handler{
 	std::string key, secret;
