@@ -10,5 +10,7 @@
 int main()
 {
 	oauth_handler h("jpQ5IemAsibklW53CxDLag", "zR5FloubeTVnOQjs0Nbk7iHVYtgaGqtQWuv1AFyZg");
-	h.get_request_token();
+	auto token = h.get_request_token();
+	if(token)
+		std::cout << "request token: " << std::get<0>(*token) << std::endl << "request token secret: " << std::get<1>(*token) << std::endl;
 }
