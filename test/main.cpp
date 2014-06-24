@@ -13,12 +13,20 @@
 # endif
 #endif
 
-#include "brace/brace.hpp"
+#include "brace/oauth_handler.hpp"
 
 int main()
 {
-	oauth_handler h("jpQ5IemAsibklW53CxDLag", "zR5FloubeTVnOQjs0Nbk7iHVYtgaGqtQWuv1AFyZg");
-	auto token = h.get_request_token();
-	if(token)
-		std::cout << "request token: " << std::get<0>(*token) << std::endl << "request token secret: " << std::get<1>(*token) << std::endl;
+	brace::oauth_handler h("jpQ5IemAsibklW53CxDLag", "zR5FloubeTVnOQjs0Nbk7iHVYtgaGqtQWuv1AFyZg");
+	auto url = h.get_authorize_url();
+	if(url){
+		std::cout << *url << std::endl;
+
+		std::string pin;
+		std::cin >> pin;
+
+		auto &response = h.set_pin(pin);
+		if(response)
+			std::cout << *response;
+	}
 }
